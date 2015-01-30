@@ -4,6 +4,8 @@ This is a wrapper around IBM's Big SQL interface.
 
     npm install ibm-bigsql
 
+If things don't work, make sure all child dependencies have been installed. ibm-bigsql requires jdbc which in turn requires java.
+
 ## Use
 
 ```
