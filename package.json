@@ -1,0 +1,15 @@
+{
+  "name": "ibm-bigsql",
+  "version": "0.0.1",
+  "description": "A wrapper enabling the execution of queries on IBM's Big SQL",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test/test.js"
+  },
+  "author": "Kevin Scott",
+  "license": "ISC",
+  "dependencies": {
+    "jdbc": "0.0.12",
+    "q": "^1.1.2"
+  }
+}
