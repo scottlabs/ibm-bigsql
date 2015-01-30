@@ -14,14 +14,13 @@ var jdbc = new ( require('jdbc') );
  * JDBC connector to BigSQL
  *
  ******/
-var java = require(path.resolve('./node_modules/jdbc/node_modules/java'));
+var java = require(__dirname + '/node_modules/jdbc/node_modules/java');
 
 // add all our jars to the Java classpath
-var jars = fs.readdirSync(path.resolve('./lib/db/jars')).map(function(file) {
-    var jar = path.resolve('./lib/db/jars/' + file);
-    if ( fs.existsSync(jar)) {
-        java.classpath.push(jar);
-    }
+var jarPath = __dirname + '/jars';
+var jars = fs.readdirSync(jarPath).map(function(file) {
+    var jar = jarPath + '/' + file;
+    java.classpath.push(jar);
 });
 
 // initialize log4j
