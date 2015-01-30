@@ -36,7 +36,7 @@ var bigSQL = function(params) {
     // hive: 'org.apache.hive.jdbc.HiveDriver'
     // big sql driver: 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver'
 
-    function getConn() {
+    function getConn(params) {
         var dfd = Q.defer();
 
         if ( ! params.user ) { throw "You must provide a user."; }
@@ -97,7 +97,7 @@ var bigSQL = function(params) {
         var dfd = Q.defer();
         if ( ! statement ) { dfd.reject('You must provide a query statement'); }
         else { 
-            getConn().then(function(conn) {
+            getConn(params).then(function(conn) {
                 // attach the connection to jdbc
                 jdbc._conn = conn;
                 jdbc.executeQuery(statement, function(err, results) {
