@@ -28,6 +28,15 @@ var nullAppender = java.newInstanceSync("org.apache.log4j.varia.NullAppender");
 java.callStaticMethod('org.apache.log4j.BasicConfigurator','configure', nullAppender);
 
 
+function parseDriver(url) {
+    if ( url.indexOf('db2') !== -1 ) {
+        // this is Big SQL
+        return 'com.ibm.db2.jcc.DB2Driver';
+    } else {
+        // this is Big SQL 1.0
+        return 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver';
+    }
+};
 
 var bigSQL = function(params) {
 
@@ -42,11 +51,13 @@ var bigSQL = function(params) {
         if ( ! params.password ) { throw "You must provide a password."; }
         if ( ! params.url ) { throw "You must provide a URL to connect to."; }
 
+        var drivername = parseDriver(params.url);
+
         var params = {
             user: params.user,
             password: params.password,
             url: params.url,
-            drivername: 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver'
+            drivername: drivername
         };
 
         jdbc.initialize(params, function(err, res) {
