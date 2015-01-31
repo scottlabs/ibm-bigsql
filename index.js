@@ -52,6 +52,8 @@ var bigSQL = function(params) {
     // hive: 'org.apache.hive.jdbc.HiveDriver'
     // big sql driver: 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver'
 
+    var version; // version is the last version selected.
+
     function getConn(params) {
         var dfd = Q.defer();
 
@@ -59,7 +61,7 @@ var bigSQL = function(params) {
         if ( ! params.password ) { throw "You must provide a password."; }
         if ( ! params.url ) { throw "You must provide a URL to connect to."; }
 
-        var version = getVersion(params.url);
+        version = getVersion(params.url);
         var drivername = parseDriver(version);
 
         var params = {
@@ -85,6 +87,7 @@ var bigSQL = function(params) {
 
         return dfd.promise;
     };
+
     function queryCallback(err, results, dfd) {
         if (err) {
             if ( err.message ) {
