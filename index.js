@@ -80,11 +80,11 @@ var bigSQL = function(params) {
         if (err) {
             if ( err.message ) {
                 // we don't always expect a response, so this is not an error
-                if ( err.message.indexOf('query did not generate a result set!') !== -1) {
-                    dfd.resolve([]);
-                } else {
+                //if ( err.message.indexOf('query did not generate a result set!') !== -1) {
+                    //dfd.resolve([]);
+                //} else {
                     dfd.reject({ error: err.message });
-                }
+                //}
             } else {
                 dfd.reject(err);
             }
@@ -103,14 +103,14 @@ var bigSQL = function(params) {
         });
     };
 
-    function query(statement) { 
+    function executeQuery(statement, func) {
         var dfd = Q.defer();
         if ( ! statement ) { dfd.reject('You must provide a query statement'); }
         else { 
             getConn(params).then(function(conn) {
                 // attach the connection to jdbc
                 jdbc._conn = conn;
-                jdbc.executeQuery(statement, function(err, results) {
+                jdbc[func](statement, function(err, results) {
                     queryCallback(err, results, dfd);
                 });
             }).fail(function(err) {
@@ -123,8 +123,18 @@ var bigSQL = function(params) {
         }
         return dfd.promise;
     };
+
+    function query(statement) { 
+        return executeQuery(statement, 'executeQuery');
+    };
+
+    function update(statement) {
+        return executeQuery(statement, 'executeUpdate');
+    };
+
     return {
-        query: query
+        query: query,
+        update: update
     }
 };
 
