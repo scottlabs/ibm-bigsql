@@ -52,7 +52,7 @@ var bigSQL = function(params) {
     // hive: 'org.apache.hive.jdbc.HiveDriver'
     // big sql driver: 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver'
 
-    var version; // version is the last version selected.
+    var version = ''; // version is the last version selected.
 
     function getConn(params) {
         var dfd = Q.defer();
