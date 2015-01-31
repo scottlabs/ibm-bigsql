@@ -88,10 +88,8 @@ var bigSQL = function(params) {
             } else {
                 dfd.reject(err);
             }
-        } else if (results) {
-            dfd.resolve(results);
         } else {
-            dfd.reject({ error: 'unknown message' });
+            dfd.resolve(results);
         }
 
         jdbc.close(function(err) {
