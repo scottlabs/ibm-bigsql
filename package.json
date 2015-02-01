@@ -11,7 +11,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:scottlabs/ibm-bigsql.git"
+    "url": "git@github.com:scottlabs/ibm-hive.git"
   },
-  "readme": "readme.md"
+  "readme": "readme.md",
+  "devDependencies": {
+    "chai": "^1.10.0",
+    "mocha": "^2.1.0"
+  }
 }
+
