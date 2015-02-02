@@ -2,6 +2,8 @@ var Q = require('q');
 var path = require('path');
 var fs = require('fs');
 var jdbc = new ( require('jdbc') );
+var getVersion = require('./lib/getVersion');
+var parseDriver = require('./lib/parseDriver');
 
 /********
  * This section sets up Java.
@@ -27,40 +29,107 @@ var jars = fs.readdirSync(jarPath).map(function(file) {
 var nullAppender = java.newInstanceSync("org.apache.log4j.varia.NullAppender");
 java.callStaticMethod('org.apache.log4j.BasicConfigurator','configure', nullAppender);
 
-
-function parseDriver(version) {
-    if ( version === 'bigsql' ) {
-        // this is Big SQL
-        return 'com.ibm.db2.jcc.DB2Driver';
-    } else if ( version === 'bigsql_v1' ) {
-        // this is Big SQL 1.0
-        return 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver';
-    }
-};
-
-function getVersion(url) {
-    if ( url.indexOf('db2') !== -1 ) {
-        return 'bigsql';
-    } else {
-        return 'bigsql_v1';
-    }
-};
-
 var bigSQL = function(params) {
-
-    // The default drivers for various Jars
-    // hive: 'org.apache.hive.jdbc.HiveDriver'
-    // big sql driver: 'com.ibm.biginsights.bigsql.jdbc.BigSQLDriver'
+    if ( ! params ) { throw "You must provide some params."; }
+    if ( ! params.user ) { throw "You must provide a user."; }
+    if ( ! params.password ) { throw "You must provide a password."; }
+    if ( ! params.url ) { throw "You must provide a URL to connect to."; }
 
     var version = getVersion(params.url);
     var drivername = parseDriver(version);
 
+    function handleError(err) {
+        if ( err.type ) {
+            // this error has already been parsed by us.
+            // it's probably moving on down the promise
+            // chain.
+            return err;
+        } else if ( err.message ) {
+            var message = err.message.replace(/\t/g,'').split('\n');
+            var description = message.shift();
+            var exception = message.shift().split(':');
+            var stack = message.join('\n');
+            var error = {};
+
+            switch(exception[0].trim()) {
+                case 'java.sql.SQLException' :
+                    if ( exception[1].trim().indexOf('No suitable driver found') !== -1 ) {
+                        error = {
+                            type: 'No suitable driver found',
+                            target: exception[1].split('No suitable driver found for').pop().trim(),
+                            message: exception[1].trim()
+                        };
+                    } else if ( exception[1].trim().indexOf('Could not establish connection to') !== -1 ) {
+                        error = {
+                            type: 'Could not establish connection',
+                            target: exception[1].split('Could not establish connection to').pop().trim(),
+                            message: exception[1].trim()
+                        };
+                    } else {
+                        error = {
+                            type: 'unknown',
+                            target: '',
+                            message: exception[1].trim()
+                        };
+                    }
+                    break;
+                case 'com.ibm.db2.jcc.am.SqlSyntaxErrorException':
+                    switch( exception[1].trim() ) {
+                        case 'DB2 SQL Error':
+                            error = {
+                                type: 'SQL Syntax Error',
+                                code: '-104',
+                                exception: exception.splice(2).join(': ')
+                            };
+                            break;
+                        default:
+                            error = {
+                                type: 'SQL Syntax Error',
+                                code: '',
+                                exception: exception.splice(2).join(': ')
+                            }
+                            break;
+                    };
+                    break;
+                case 'com.ibm.db2.jcc.am.SqlException':
+                    if ( exception[1].indexOf('Method executeQuery cannot be used for update') !== -1 ) {
+                        error = {
+                            type: 'Wrong query type, need update',
+                            code: '-4476',
+                            message: exception[1].trim()
+                        };
+                    } else if ( exception[1].indexOf('Method executeUpdate cannot be used for query') !== -1 ) {
+                        error = {
+                            type: 'Wrong query type, need execute',
+                            code: '-4476',
+                            message: exception[1].trim()
+                        };
+                    } else {
+                        error = {
+                            type: 'unknown',
+                            target: '',
+                            message: exception[1].trim()
+                        };
+                    }
+                    break;
+                default:
+                    error = exception.join(': ');
+                    break;
+            }
+
+            error.java = {
+                message: description,
+                stack: stack
+            };
+
+            return error;
+        } else {
+            return err;
+        }
+    };
+
     function getConn(params) {
         var dfd = Q.defer();
-
-        if ( ! params.user ) { throw "You must provide a user."; }
-        if ( ! params.password ) { throw "You must provide a password."; }
-        if ( ! params.url ) { throw "You must provide a URL to connect to."; }
 
         var params = {
             user: params.user,
@@ -71,13 +140,13 @@ var bigSQL = function(params) {
 
         jdbc.initialize(params, function(err, res) {
             if (err) {
-                dfd.reject({ error: err.message });
+                dfd.reject(handleError(err));
             } else {
                 jdbc.open(function(err, conn) {
                     if (conn) {
                         dfd.resolve(conn);
                     } else {
-                        dfd.reject({ error: err.message });
+                        dfd.reject(handleError(err));
                     }
                 });
             }
@@ -93,10 +162,10 @@ var bigSQL = function(params) {
                 //if ( err.message.indexOf('query did not generate a result set!') !== -1) {
                     //dfd.resolve([]);
                 //} else {
-                    dfd.reject({ error: err.message });
+                dfd.reject(handleError(err));
                 //}
             } else {
-                dfd.reject(err);
+                dfd.reject(handleError(err));
             }
         } else {
             dfd.resolve(results);
@@ -122,11 +191,8 @@ var bigSQL = function(params) {
                     queryCallback(err, results, dfd);
                 });
             }).fail(function(err) {
-                if ( err.message ) {
-                    dfd.reject({ error: err.message });
-                } else {
-                    dfd.reject(err);
-                }
+
+                dfd.reject(handleError(err));
             });
         }
         return dfd.promise;

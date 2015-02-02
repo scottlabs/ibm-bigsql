@@ -17,7 +17,11 @@ var bigSQL = new BigSQL({
     url: 'jdbc:hive2://host:port/database'
 });
 
-bigSQL.query('SHOW TABLES').then(function(results) {
+bigSQL.query('query').then(function(results) {
     console.log(results);
 });
 ```
+
+BigSQL will automatically detect bigsql or bigsql_v1 syntax based on the incoming URL.
+
+You must specifically use the respective query or update methods depending on the statements.
