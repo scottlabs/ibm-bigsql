@@ -37,6 +37,7 @@ var bigSQL = function(params) {
 
     var version = getVersion(params.url);
     var drivername = parseDriver(version);
+    var connection;
 
     function handleError(err) {
         if ( err.type ) {
@@ -131,26 +132,31 @@ var bigSQL = function(params) {
     function getConn(params) {
         var dfd = Q.defer();
 
-        var params = {
-            user: params.user,
-            password: params.password,
-            url: params.url,
-            drivername: drivername
-        };
+        if ( connection ) {
+            dfd.resolve(connection);
+        } else {
+            var params = {
+                user: params.user,
+                password: params.password,
+                url: params.url,
+                drivername: drivername
+            };
 
-        jdbc.initialize(params, function(err, res) {
-            if (err) {
-                dfd.reject(handleError(err));
-            } else {
-                jdbc.open(function(err, conn) {
-                    if (conn) {
-                        dfd.resolve(conn);
-                    } else {
-                        dfd.reject(handleError(err));
-                    }
-                });
-            }
-        });
+            jdbc.initialize(params, function(err, res) {
+                if (err) {
+                    dfd.reject(handleError(err));
+                } else {
+                    jdbc.open(function(err, conn) {
+                        if (conn) {
+                            connection = conn;
+                            dfd.resolve(conn);
+                        } else {
+                            dfd.reject(handleError(err));
+                        }
+                    });
+                }
+            });
+        }
 
         return dfd.promise;
     };
