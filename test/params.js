@@ -18,7 +18,7 @@ if ( ! id ) {
     err = true;
     console.log('You must specify an ID for testing.');
     console.log('The tests will take care of constructing appropriate IBM URL connections');
-    console.log('npm config set ibm-bigsql:url 123');
+    console.log('npm config set ibm-bigsql:id 123');
 }
 
 if ( err ) {
