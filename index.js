@@ -1,5 +1,4 @@
-var Q = require('q');
-var path = require('path');
+var Q = require('q'); var path = require('path');
 var fs = require('fs');
 var jdbc = new ( require('jdbc') );
 var getVersion = require('./lib/getVersion');
@@ -38,6 +37,8 @@ var bigSQL = function(params) {
     var version = getVersion(params.url);
     var drivername = parseDriver(version);
     var connection;
+    var freeConnection = params.freeConnection || 30000; // after 30 seconds of inactivity
+    var timers = {};
 
     function handleError(err) {
         if ( err.type ) {
@@ -132,7 +133,7 @@ var bigSQL = function(params) {
     function getConn(params) {
         var dfd = Q.defer();
 
-        if ( connection ) {
+        if ( 0 && connection ) {
             dfd.resolve(connection);
         } else {
             var params = {
@@ -161,6 +162,17 @@ var bigSQL = function(params) {
         return dfd.promise;
     };
 
+    function close() {
+        jdbc.close(function(err) {
+            connection = null;
+            if(err) {
+                // not sure how to handle this
+                console.error('Error closing JDBC connection');
+                console.error(err);
+            }
+        });
+    };
+
     function queryCallback(err, results, dfd) {
         if (err) {
             if ( err.message ) {
@@ -177,19 +189,14 @@ var bigSQL = function(params) {
             dfd.resolve(results);
         }
 
-        jdbc.close(function(err) {
-            if(err) {
-                // not sure how to handle this
-                console.error('Error closing JDBC connection');
-                console.error(err);
-            }
-        });
+        // always close a connection
+        close();
     };
 
     function executeQuery(statement, func) {
         var dfd = Q.defer();
         if ( ! statement ) { dfd.reject('You must provide a query statement'); }
-        else { 
+        else {
             getConn(params).then(function(conn) {
                 // attach the connection to jdbc
                 jdbc._conn = conn;

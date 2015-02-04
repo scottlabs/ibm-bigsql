@@ -3,7 +3,8 @@ chai.should();
 chai.use(require('chai-things'));
 var params = require('./params');
 var fs = require('fs');
-var path = require('path');
+var proxyquire = require('proxyquire');
+var Q = require('q');
 
 var BigSQL = require('../index');
 var getVersion = require('../lib/getVersion');
@@ -97,7 +98,7 @@ describe('BigSQL', function() {
         });
 
         it('should handle an authentication error', function(done) {
-            this.timeout(5000);
+            this.timeout(15000);
             var badParams = params.get('bigsql_v1');
             badParams.user = 'foo';
             bigSql = new BigSQL(badParams);
@@ -145,6 +146,12 @@ describe('BigSQL', function() {
             }).fail(done);
         });
 
+        after(function(done) {
+            bigSql.update('DROP TABLE IF EXISTS '+tableName).then(function() {
+                done();
+            }).fail(done);
+        });
+
         it('should be able to perform an update', function(done) {
             this.timeout(30000);
             var insertQuery = "INSERT INTO "+tableName+" VALUES('bar')";
@@ -162,5 +169,72 @@ describe('BigSQL', function() {
             }).fail(done);
         });
     });
+
+    /*
+    describe('Connection', function() {
+        var bigSql;
+        var tableName = 'foo'+(new Date()).getTime();
+        var conn;
+        var p = params.get('bigsql');
+        p.freeConnection = 1; // 1 ms
+        var jdbc = {
+            initialize: function(params, cb) {
+                cb();
+            },
+            open: function(cb) {
+                conn = {
+                    id: Math.random() 
+                };
+                cb(null, conn);
+            },
+            executeQuery: function(stmt, cb) {
+                //conn();
+                cb(null, [1,2,3]);
+            },
+            close: function(cb) {
+                cb();
+            }
+        };
+
+        before(function(done) {
+            var BigSQL = proxyquire('../index',{
+                jdbc: function() {
+                    return jdbc;
+                }
+            });
+
+            bigSql = new BigSQL(p);
+            done();
+        });
+
+        it('should reuse connection on subsequent queries', function(done) {
+            var startingConn;
+            var selectQuery = "SELECT * FROM "+tableName;
+            bigSql.query(selectQuery).then(function(results) {
+                startingConn = conn;
+                return bigSql.query(selectQuery);
+            }).then(function(results) {
+                conn.should.equal(startingConn);
+                done();
+            }).fail(done);
+        });
+
+        it('should free the connection after a period of time', function(done) {
+            var startingConn;
+            var selectQuery = "SELECT * FROM "+tableName;
+            bigSql.query(selectQuery).then(function(results) {
+                startingConn = conn;
+                var dfd = Q.defer();
+                setTimeout(dfd.resolve, p.freeConnection + 1);
+                return dfd.promise;
+            }).then(function() {
+                return bigSql.query(selectQuery);
+            }).then(function(results) {
+                conn.should.not.equal(startingConn);
+                done();
+            }).fail(done);
+        });
+    });
+    */
 
 });
