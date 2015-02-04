@@ -147,6 +147,7 @@ describe('BigSQL', function() {
         });
 
         after(function(done) {
+            this.timeout(10000);
             bigSql.update('DROP TABLE IF EXISTS '+tableName).then(function() {
                 done();
             }).fail(done);
