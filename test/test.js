@@ -147,7 +147,7 @@ describe('BigSQL', function() {
         });
 
         after(function(done) {
-            this.timeout(10000);
+            this.timeout(30000);
             bigSql.update('DROP TABLE IF EXISTS '+tableName).then(function() {
                 done();
             }).fail(done);
@@ -169,73 +169,6 @@ describe('BigSQL', function() {
                 done();
             }).fail(done);
         });
-    });
-
-    /*
-    describe('Connection', function() {
-        var bigSql;
-        var tableName = 'foo'+(new Date()).getTime();
-        var conn;
-        var p = params.get('bigsql');
-        p.freeConnection = 1; // 1 ms
-        var jdbc = {
-            initialize: function(params, cb) {
-                cb();
-            },
-            open: function(cb) {
-                conn = {
-                    id: Math.random() 
-                };
-                cb(null, conn);
-            },
-            executeQuery: function(stmt, cb) {
-                //conn();
-                cb(null, [1,2,3]);
-            },
-            close: function(cb) {
-                cb();
-            }
-        };
-
-        before(function(done) {
-            var BigSQL = proxyquire('../index',{
-                jdbc: function() {
-                    return jdbc;
-                }
-            });
-
-            bigSql = new BigSQL(p);
-            done();
-        });
-
-        it('should reuse connection on subsequent queries', function(done) {
-            var startingConn;
-            var selectQuery = "SELECT * FROM "+tableName;
-            bigSql.query(selectQuery).then(function(results) {
-                startingConn = conn;
-                return bigSql.query(selectQuery);
-            }).then(function(results) {
-                conn.should.equal(startingConn);
-                done();
-            }).fail(done);
-        });
-
-        it('should free the connection after a period of time', function(done) {
-            var startingConn;
-            var selectQuery = "SELECT * FROM "+tableName;
-            bigSql.query(selectQuery).then(function(results) {
-                startingConn = conn;
-                var dfd = Q.defer();
-                setTimeout(dfd.resolve, p.freeConnection + 1);
-                return dfd.promise;
-            }).then(function() {
-                return bigSql.query(selectQuery);
-            }).then(function(results) {
-                conn.should.not.equal(startingConn);
-                done();
-            }).fail(done);
-        });
-    });
-    */
+    }); 
 
 });
