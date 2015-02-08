@@ -45,31 +45,27 @@ var bigSQL = function(params) {
     function getConn(params) {
         var dfd = Q.defer();
 
-        if ( 0 && connection ) {
-            dfd.resolve(connection);
-        } else {
-            var params = {
-                user: params.user,
-                password: params.password,
-                url: params.url,
-                drivername: drivername
-            };
+        var params = {
+            user: params.user,
+            password: params.password,
+            url: params.url,
+            drivername: drivername
+        };
 
-            jdbc.initialize(params, function(err, res) {
-                if (err) {
-                    dfd.reject(handleError(err));
-                } else {
-                    jdbc.open(function(err, conn) {
-                        if (conn) {
-                            connection = conn;
-                            dfd.resolve(conn);
-                        } else {
-                            dfd.reject(handleError(err));
-                        }
-                    });
-                }
-            });
-        }
+        jdbc.initialize(params, function(err, res) {
+            if (err) {
+                dfd.reject(handleError(err));
+            } else {
+                jdbc.open(function(err, conn) {
+                    if (conn) {
+                        connection = conn;
+                        dfd.resolve(conn);
+                    } else {
+                        dfd.reject(handleError(err));
+                    }
+                });
+            }
+        });
 
         return dfd.promise;
     };
@@ -85,17 +81,20 @@ var bigSQL = function(params) {
         });
     };
 
-    function queryCallback(err, results, dfd) {
+    function queryCallback(params) {
+        var err = params.err;
+        var results = params.results;
+        var dfd = params.dfd;
+        var statement = params.statement;
+        var func = params.func;
+        var attempts = params.attempts || 1;
+
         if (err) {
-            if ( err.message ) {
-                // we don't always expect a response, so this is not an error
-                //if ( err.message.indexOf('query did not generate a result set!') !== -1) {
-                    //dfd.resolve([]);
-                //} else {
-                dfd.reject(handleError(err));
-                //}
+            err = handleError(err);
+            if ( err.code === '-4470' && attempts < 3 ) {
+                executeQuery(statement, func, dfd, attempts);
             } else {
-                dfd.reject(handleError(err));
+                dfd.reject(err);
             }
         } else {
             dfd.resolve(results);
@@ -113,21 +112,26 @@ var bigSQL = function(params) {
                 console.error(err);
             }
         });
->>>>>>> connection-issues
     };
 
-    function executeQuery(statement, func) {
-        var dfd = Q.defer();
+    function executeQuery(statement, func, dfd, attempts) {
+        if ( ! dfd ) { dfd = Q.defer(); }
         if ( ! statement ) { dfd.reject('You must provide a query statement'); }
         else {
             getConn(params).then(function(conn) {
                 // attach the connection to jdbc
                 jdbc._conn = conn;
                 jdbc[func](statement, function(err, results) {
-                    queryCallback(err, results, dfd);
+                    queryCallback({
+                        err: err,
+                        results: results,
+                        dfd: dfd,
+                        statement: statement,
+                        func: func,
+                        attempts: attempts
+                    });
                 });
             }).fail(function(err) {
-
                 dfd.reject(handleError(err));
             });
         }
@@ -146,7 +150,8 @@ var bigSQL = function(params) {
         query: query,
         update: update,
         version: version,
-        close: close
+        close: close,
+        getConn: getConn
     }
 };
 

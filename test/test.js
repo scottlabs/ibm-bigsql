@@ -4,6 +4,7 @@ chai.use(require('chai-things'));
 var params = require('./params');
 var fs = require('fs');
 var proxyquire = require('proxyquire');
+var sinon = require('sinon');
 var Q = require('q');
 
 var BigSQL = require('../index');
@@ -126,6 +127,37 @@ describe('BigSQL', function() {
             bigSql.update("garbage").fail(function(err) {
                 err.type.should.equal('SQL Syntax Error');
                 err.code.should.equal('-104');
+                done();
+            });
+        });
+
+        it('should retry on connection closed', function(done) {
+            this.timeout(5000);
+
+            var forceClose = true;
+            var called = 0;
+
+            bigSql = proxyquire('../index',{
+                'jdbc': function() {
+                    var jdbc = new (require('jdbc'));
+                    var open = jdbc.open;
+                    jdbc.open = function(callback) {
+                        called += 1;
+                        open.call(jdbc, function(err, conn) {
+                            if ( forceClose ) {
+                                jdbc.close(function(){}); // force a close
+                                forceClose = false;
+                            }
+                            callback(err, conn);
+                        });
+                    };
+                    return jdbc;
+                }
+            })(params.get('bigsql'));
+
+
+            bigSql.update("garbage").then(done).fail(function(err) {
+                called.should.equal(2);
                 done();
             });
         });
