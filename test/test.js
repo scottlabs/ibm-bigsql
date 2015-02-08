@@ -97,7 +97,7 @@ describe('BigSQL', function() {
         });
 
         it('should handle an authentication error', function(done) {
-            this.timeout(5000);
+            this.timeout(15000);
             var badParams = params.get('bigsql_v1');
             badParams.user = 'foo';
             bigSql = new BigSQL(badParams);
